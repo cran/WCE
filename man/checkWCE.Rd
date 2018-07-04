@@ -6,8 +6,7 @@
 This function checks whether the arguments passed to the WCE function are in the correct format. If at least one argument is incorrectly specified, the function returns an error message specifying what needs to be fixed. 
 }
 \usage{
-checkWCE(data, id = "Id", event = "Event",  start = "Start", stop = "Stop",
- expos = "dose")
+checkWCE(data, id, event, start, stop, expos)
 }
 %- maybe also 'usage' for other objects documented here.
 \arguments{

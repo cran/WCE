@@ -11,9 +11,8 @@ estimates the weight function in the Cox proportional hazards model. The
 function that assigns weights to doses taken in the past is estimated using 
 cubic regression splines.}
 \usage{
-WCE(data, analysis, nknots, cutoff, constrained = FALSE, int.knots = NULL,
-	aic = FALSE, MatchedSet = NULL, id = "Id", event = "Event", start = "Start", 
-	stop = "Stop", expos = "dose", covariates = NULL, controls = NULL, ...)
+WCE(data, analysis, nknots, cutoff, constrained = FALSE, aic = FALSE, MatchedSet = NULL, 
+	id, event, start, stop, expos, covariates = NULL, controls = NULL, ...)
 }
 
 \arguments{
@@ -22,7 +21,6 @@ WCE(data, analysis, nknots, cutoff, constrained = FALSE, int.knots = NULL,
   \item{nknots}{A scalar or a vector. Corresponds to the number(s) of interior knots for the cubic splines to estimate the weight function. For example, if \code{nknots} is set to 2, then a model with two interior knots is fitted. If \code{nknots}  is set to 1:3 or alternatively c(1,2,3) then three models with 1, 2, and 3 interior knots, respectively, are fitted.}
   \item{cutoff}{Integer. Time window over which the WCE model is estimated. Corresponds to the length of the estimated weight function.}
   \item{constrained}{Controls whether the weight function should be constrained to smoothly go to zero. Set to FALSE for unconstrained models, to 'Right' or 'R' to constrain the weight function to smoothly go to zero for exposure remote in time, and to 'Left' or 'L' to constrain the weight function to start a zero for the current values.}
-  \item{int.knots}{A vector indicating the placement of interior knots. If NULL, then interior knots are placed at quantiles of the exposure variable distribution. Default to NULL.}
   \item{aic}{Logical. If TRUE, then the AIC is used to select the best fitting model among those estimated for the different numbers of interior knots requested with \code{nknots}. If FALSE, then the BIC is used instead of the AIC. Default to FALSE (BIC). Note that the BIC implemented in \code{WCE} is the version suggested by Volinsky and Raftery in Biometrics (2000), which corresponds to BIC = 2 * log(PL) + p * log(d) where PL is the model's partial likelihood, p is the number of estimated parameters and d is the number of uncensored events. See Sylvestre and Abrahamowicz (2009) for more details.}
   \item{MatchedSet}{Argument required for 'NCC' analysis only. Corresponds to the variable in \code{data} that specifies the matched sets for the conditional logistic regression. Currently not implemented.}
   \item{id}{Name of the variable in \code{data} corresponding to the identification of subjects. }
@@ -40,13 +38,14 @@ The current implementation of the \code{WCE} function does not allow missing val
 Intervals in \code{data} determined by \code{start} and \code{stop} are assumed to be open on the left and closed on the right, (start, stop]. 
 Intervals for a given individual (\code{Id}) must not overlap, and must cover the entire follow-up for the individual. 
 The \code{start} and \code{stop} values for a given interval must not be equal.
-Delayed entry is not implemented in this version of the \code{WCE} function so all of the \code{Id} must start their follow-up at the same \code{start} value.}
+Delayed entry is not implemented in this version of the \code{WCE} function so all of the \code{Id} must start their follow-up at the same \code{start} value.
+The interior knots are placed at quantiles of the exposure variable distribution.}
 
 \value{
 A list of 14 items:
 \item{knotsmat}{List of vectors of knots used for the spline modelling of the weight function(s).}
 \item{WCEmat}{Matrix of the estimated weight function. Each row corresponds to an estimated weight function. The number of columns in the \code{WCEmat} corresponds to the value of the argument \code{nknots}.}
-\item{PL}{Partial likelihood for each estimated model.}
+\item{loglik}{Partial likelihood for each estimated model.}
 \item{est}{List of vectors of estimated coefficients for the artificial time-dependent variables used to fit the WCE model(s).}
 \item{vcovmat}{List of variance-covariance matrices estimated for each model.}
 \item{SED}{List of vectors of estimated standard errors of the estimated coefficients of the artificial time-dependent variables used to fit each WCE model.}
@@ -54,8 +53,8 @@ A list of 14 items:
 \item{se.covariates}{List of vectors of standard errors of the estimated coefficients for the covariates.}
 \item{covariates}{Names of the covariates used in the estimation.}
 \item{constrained}{Indicator of whether the model(s) was(were) unconstrained, right-constrained or left-constrained.}
-\item{ne}{Number of events.}
-\item{a}{Logical value corresponding to the \code{aic} argument.}                 
+\item{nevents}{Number of events.}
+\item{aic}{Logical value corresponding to the \code{aic} argument.}                 
 \item{info.criterion}{Value of the AIC or BIC for each model estimated.}
 \item{analysis}{Value of the \code{analysis} argument.}
 \item{...}{Potentially, additional arguments (as required by generic).}
@@ -96,18 +95,33 @@ boot.WCE <- matrix(NA, ncol = 90, nrow=B)
 boot.HR <- rep(NA, B)
 
 # Sample IDs with replacement
-for (i in 1:B) {
-	# select observations in bootstrap sample
-	datab <- drugdata[drugdata$Id \%in\% sample(ID, replace=TRUE),]
-	mod <- WCE(data = datab, analysis = "Cox", nknots = 1:3, cutoff = 90, 
-			   constrained = "R", int.knots = NULL, aic = FALSE, MatchedSet = NULL, 
-			   id = "Id", event = "Event", start = "Start", stop = "Stop", 
-			   expos = "dose", covariates = c("sex", "age"))
+for (i in 1:B){
+   ID.resamp <- sort(sample(ID, replace=T)) 
+   datab <- drugdata[drugdata$Id %in% ID.resamp,] # select obs. but duplicated Id are ignored
 
-	# return best WCE estimates and corresponding HR
-	best <- which.min(mod$info.criterion)
-	boot.WCE[i,] <- mod$WCEmat[best,]
-	boot.HR[i] <- HR.WCE(mod, rep(1, 90), rep(0, 90))
+   # deal with duplicated Id and assign them new Id
+   step <- 1
+   repeat {
+      ID.resamp <- ID.resamp[duplicated(ID.resamp)==TRUE] # select duplicated Id in ID.resamp 
+      if (length(ID.resamp)==0) break # stop when no more duplicated Id to deal with   
+      subset.dup <- drugdata[drugdata$Id %in% ID.resamp,] # select obs. but remaining duplicated Id are ignored
+      # assign new Id to duplicates
+      subset.dup$Id <- subset.dup$Id + step * 10^ceiling(log10(max(drugdata$Id))) 
+         # 10^ceiling(log10(max(drugdata$Id)) is the power of 10 
+         # above the maximum Id from original data
+      datab <- rbind(datab, subset.dup)
+      step <- step+1
+   }
+
+   mod <- WCE(data = datab, analysis = "Cox", nknots = 1:3, cutoff = 90, 
+      constrained = "R", aic = FALSE, MatchedSet = NULL, 
+      id = "Id", event = "Event", start = "Start", stop = "Stop", 
+      expos = "dose", covariates = c("sex", "age"))
+
+   # return best WCE estimates and corresponding HR
+   best <- which.min(mod$info.criterion)
+   boot.WCE[i,] <- mod$WCEmat[best,]
+   boot.HR[i] <- HR.WCE(mod, rep(1, 90), rep(0, 90))
 }
 
 # Summarize bootstrap results using percentile method

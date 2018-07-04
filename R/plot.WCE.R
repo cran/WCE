@@ -1,7 +1,7 @@
 plot.WCE <- function(x, allres = FALSE, ...){
 	best <- which.min(x$info.criterion)
 	sub1 = names(x$knotsmat)[best]
-	if (x$a == FALSE) {sub2 = 'BIC'} else {sub2 = 'AIC'}
+	if (x$aic == FALSE) {sub2 = 'BIC'} else {sub2 = 'AIC'}
 	n.knots <- length(x$info.criterion)
 	if (allres == TRUE){
 		matplot(t(x$WCEmat), lty=1, type = 'l', ylab = 'weights', xlab = 'Time elapsed') 

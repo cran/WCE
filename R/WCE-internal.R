@@ -1,3 +1,7 @@
+########################################################################################################################
+### '.EstimateSpline' functions (internal)
+########################################################################################################################
+
 .EstimateSplineConstrainedCC <- function(DATA, n.knots, covariates = NULL, Constrained = 'Right'){
 	if (Constrained == 'Left') {
 		Dvar <- paste("D", 3:(n.knots+4), sep="")} else {
@@ -71,9 +75,9 @@
 .maxfu <- function(x){(max(x$Stop) - min(x$Start) + 1)} # maximum length of follow-up per individual
   
 .augm.knots <- function(inner, f.up){ # augments the set of interior knots for spline basis
-ret <- c(-3,-2,-1,0, inner, f.up,(f.up+1), (f.up+2), (f.up+3))
-names(ret) <- NULL
-ret
+  ret <- c(-3,-2,-1,0, inner, f.up,(f.up+1), (f.up+2), (f.up+3))
+  names(ret) <- NULL
+  ret
 }
 
 .knots.equi <- function(n.knots, m){ # use quantiles for knots placement
@@ -118,28 +122,31 @@ ret
 linesfor1}
 
 .add <- function(x, m){ 
-if (length(x)<m){ x <- c(x, rep(NA, m-length(x)))}
-x}
+  if (length(x)<m){ x <- c(x, rep(NA, m-length(x)))}
+  x
+}
 
 .nicer <- function(a){
-m <- max(sapply(a, length))
-t(sapply(a, .add, m))}
+  m <- max(sapply(a, length))
+  t(sapply(a, .add, m))
+}
 
 .gapi <- function(dati){
-if (nrow(dati)==1){ret <- FALSE} else {
-s1 <- dati$Start[-1]
-s2 <- dati$Stop[-nrow(dati)]
-ret <- !(sum(s1==s2) == (nrow(dati)-1))}
-ret}
+  if (nrow(dati)==1){ret <- FALSE} else {
+  s1 <- dati$Start[-1]
+  s2 <- dati$Stop[-nrow(dati)]
+  ret <- !(sum(s1==s2) == (nrow(dati)-1))}
+  ret
+}
 
 .gap <- function(data){
-sum(ddply(data, .(data$Id), .gapi)==T)>1
+  sum(ddply(data, .(data$Id), .gapi)==T)>1
 }
 
 .sumWCEall <- function(x, objname, ...){
-if (is.na (sum(x$PL)) == T) {
-	for (i in 1:length(x$PL)){ if (is.na(x$PL[i])==T) {cat('Warning : model', i, 'did not converge, and no \npartial log-likelihood was produced. Results \nfor this model should be ignored.\n\n')}}}
-for (i in 1:length(x$PL)) {
+  if (is.na (sum(x$loglik)) == T) {
+	for (i in 1:length(x$loglik)){ if (is.na(x$loglik[i])==T) {cat('Warning : model', i, 'did not converge, and no \npartial log-likelihood was produced. Results \nfor this model should be ignored.\n\n')}}}
+  for (i in 1:length(x$loglik)) {
 	if (sum(x$SED[[i]]==0) >0) {cat('Warning : some of the SE for the spline \nvariables in model', i, 'are exaclty zero, probably \nbecause the model did not converge. Variable(s)',  names(which(x$SED[[1]]==0)), ' \nhad SE=0. Consider re-parametrizing or increasing \nthe number of iteractions.\n\n')}}
 	if (x$analysis == 'Cox') lab = 'Proportional hazards model'	
 	if (x$analysis == 'NCC') lab = 'Conditional logistic regression'
@@ -149,7 +156,7 @@ for (i in 1:length(x$PL)) {
 		cat("\n*** Estimated right-constrained WCE function(s)(",lab  ,").***\n\n", sep='')} 
 	if (x$constrained == FALSE) {
 		cat("\nUnconstrained estimated WCE function(s)(",lab  ,").***\n\n", sep='')}
-  if (x$a == F) {criterion <- "BIC"} else {criterion <- "AIC"}
+  if (x$aic == F) {criterion <- "BIC"} else {criterion <- "AIC"}
   if (is.null(x$covariates[1]) == F){
 	for (i in 1:length(x$info.criterion)){	
 		cat("            Model with", length(.get.interior(x$knotsmat[i])), "knots\n")
@@ -161,11 +168,11 @@ for (i in 1:length(x$PL)) {
 		    colnames(coefmat) <- c("coef", "exp(coef)", "se(coef)", "z","p")
 		    print(round(coefmat, 4))
 		    rm(coefmat)
-    		    cat("\nPartial log-likelihood:", x$PL[i], "  ", criterion, ':', x$info.criterion[i], "\n\n\n", sep='')}
+    		    cat("\nPartial log-likelihood:", x$loglik[i], "  ", criterion, ':', x$info.criterion[i], "\n\n\n", sep='')}
 	} else {
 	cat("Summary of fit for each model:\n")
 	# need to modify for cox
-		fitmat<- data.frame(as.vector(round(x$PL,3)), as.vector(round(x$info.criterion,3)))
+		fitmat<- data.frame(as.vector(round(x$loglik,3)), as.vector(round(x$info.criterion,3)))
 		names(fitmat) <- c('LogLik', criterion)
 		if (length(x$info.criterion)==1) {rownames <- c('1 knot')} else{
 			rownames(fitmat) <- names(x$knotsmat)
@@ -173,19 +180,20 @@ for (i in 1:length(x$PL)) {
 	print(fitmat)
 	cat('\n')
 	}
-    cat("Number of events: ", x$ne, "\n\n", sep='')
-    cat("Use plot(", objname , ', allres = T) to see the estimated weight \nfunctions corresponding to these models.\n\n', sep="")}
+    cat("Number of events: ", x$nevents, "\n\n", sep='')
+    cat("Use plot(", objname , ', allres = T) to see the estimated weight \nfunctions corresponding to these models.\n\n', sep="")
+}
   
 .get.interior <- function(g){
-g <- unlist(g)
-g <- g[5:length(g)]
-g[1:(length(g) - 4)]
+  g <- unlist(g)
+  g <- g[5:length(g)]
+  g[1:(length(g) - 4)]
 }
 
 .sumWCEbest <- function(x, objname, ...){
 	best <- which.min(x$info.criterion)
 	
-	if (is.na(x$PL[best]) == T) {cat('Warning : the model did not converge, and no \npartial log-likelihood was produced. Results \nfor this model should be ignored.\n\n')}
+	if (is.na(x$loglik[best]) == T) {cat('Warning : the model did not converge, and no \npartial log-likelihood was produced. Results \nfor this model should be ignored.\n\n')}
 	if (sum(x$SED[[best]]==0) >0) {cat('Warning : some of the SE for the spline \nvariables in the model are exaclty zero, probably \nbecause the model did not converge. Variable(s)',  names(which(x$SED[[1]]==0)), ' \nhad SE=0. Consider re-parametrizing or increasing \nthe number of iteractions.\n\n')}
 
 	if (x$analysis == 'Cox') lab = 'Proportional hazards model'	
@@ -202,7 +210,7 @@ g[1:(length(g) - 4)]
 		cat("\n*** Right-constrained estimated WCE function  (",lab ,").***\n", sep='')}
 	if (x$constrained == FALSE) {
 		cat("\nUnconstrained estimated WCE function (",lab ,").***\n", sep='')}
-   if (x$a == F) {criterion <- "BIC: "} else {criterion <- "AIC: "}
+   if (x$aic == F) {criterion <- "BIC: "} else {criterion <- "AIC: "}
   if (is.null(x$covariates[1]) == F){
     cat("\nEstimated coefficients for the covariates: \n")
     bhat <- unlist(x$beta.hat.covariates[best,])
@@ -213,9 +221,7 @@ g[1:(length(g) - 4)]
     print(round(coefmat, 4))
 	cat('\n')
       }
- cat("Partial log-likelihood: ", x$PL[which.min(x$info.criterion)], "  ", criterion, min(x$info.criterion), "\n\n", sep='')
- cat("Number of events: ", x$ne, "\n\n", sep='')
+ cat("Partial log-likelihood: ", x$loglik[which.min(x$info.criterion)], "  ", criterion, min(x$info.criterion), "\n\n", sep='')
+ cat("Number of events: ", x$nevents, "\n\n", sep='')
  cat("Use plot(", objname , ') to see the estimated weight function corresponding to this model.\n', sep="")
 }
-
-knots.WCE <- function(x){x$knotsmat} # obtain knots placement from WCE object

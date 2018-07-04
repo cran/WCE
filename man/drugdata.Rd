@@ -21,7 +21,7 @@ Data to illustrate the use of WCE.
 \details{
 The variables \code{sex} and \code{age} are covariates. They are optional and illustrate the inclusion of adjustment variables. Covariates can be numeric or factors. 
 }
-\source{This dataset was simulated using the \code{PermAlgo} package ( \url{http://cran.r-project.org/web/packages/PermAlgo/index.html}).}
+\source{This dataset was simulated using the \code{PermAlgo} package ( \url{https://cran.r-project.org/package=PermAlgo}).}
 \references{
 Sylvestre, MP, & Abrahamowicz, M. (2008). Comparison of algorithms to generate event times conditional on time-dependent covariates. Statistics in Medicine, 27(14), 2618-2634.
 }

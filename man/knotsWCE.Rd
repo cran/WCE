@@ -1,14 +1,12 @@
-\name{knots.WCE}
-\alias{knots.WCE}
-\alias{knots}
+\name{knotsWCE}
+\alias{knotsWCE}
 %- Also NEED an '\alias' for EACH other topic documented here.
 \title{Obtain the placement of the knots used for splines in WCE models}
 \description{
 This function extracts the knots placement for the spline function used to fit the WCE models.}
-\usage{\method{knots}{WCE}(Fn, \dots)}
+\usage{knotsWCE(x)}
 \arguments{
-	\item{Fn}{A WCE object returned by \code{WCE}.}
-	\item{\dots}{Optional. Additional arguments to be passed to \code{knots} (none currently used).}
+	\item{x}{A WCE object returned by \code{WCE}.}
 }
 
 \value{
@@ -28,6 +26,7 @@ Marie-Pierre Sylvestre\cr
 wce <- WCE(drugdata, "Cox", 1, 90, constrained = "R", id = "Id", event = "Event",
 		   start = "Start", stop = "Stop", expos = "dose", 
 		   covariates = c("age", "sex"))
-knots(wce)
+
+knotsWCE(wce)
 
 }

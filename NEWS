@@ -1,0 +1,18 @@
+Changes in version 1.0.1 (July 3 2018)
+
+• Removed default values for arguments id, event, start, stop, and expos of the WCE and checkWCE functions. 
+
+• Fixed a potential bug in the estimation of the WCE model resulting from the values passed to arguments id, event, start, stop, expos and covariates of the WCE function.
+
+• Removed the option to specify the location of interior knots (with argument int.knots).
+
+• Changed names of some attributes of WCE objects to increase clarity:
+   - PL changed to loglik
+   - a changed to aic
+   - ne changed to nevents 
+
+
+Version 1.0 (January 14 2015)
+
+• Initial version of the package.
+
