@@ -1,4 +1,5 @@
-WCE.cox  <- function(data, nknots, cutoff, constrained = FALSE, int.knots = NULL, aic = FALSE, id, event, start, stop, expos, covariates = NULL, controls = NULL,  ...) {
+WCE.cox  <- function(data, nknots, cutoff, constrained = FALSE, aic = FALSE, id, event, start, stop, expos, covariates = NULL, controls = NULL,  ...) {
+   int.knots <- NULL # Remove this line when we later implement this option (and add argument to list above, and to WCE.data.frame & WCE) 
 
    # rename variables for convenience
    names(data)[names(data) == id] = 'Id'

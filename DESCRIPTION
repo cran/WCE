@@ -1,8 +1,8 @@
 Package: WCE
 Type: Package
 Title: Weighted Cumulative Exposure Models
-Version: 1.0.1
-Date: 2018-07-03
+Version: 1.0.2
+Date: 2018-08-08
 Author: Marie-Pierre Sylvestre, Marie-Eve Beauchamp, Ryan Patrick Kyle, Michal Abrahamowicz
 Maintainer: Marie-Pierre Sylvestre <marie-pierre.sylvestre@umontreal.ca>
 Depends: R (>= 2.10)
@@ -13,6 +13,6 @@ Description: A flexible method for modeling cumulative effects of time-varying e
 License: GPL (>= 2)
 LazyData: true
 NeedsCompilation: no
-Packaged: 2018-07-03 20:50:55 UTC; p0093616
+Packaged: 2018-08-08 18:18:11 UTC; p0093616
 Repository: CRAN
-Date/Publication: 2018-07-04 14:40:03 UTC
+Date/Publication: 2018-08-08 19:20:02 UTC

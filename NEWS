@@ -1,3 +1,8 @@
+Changes in version 1.0.2 (August 8 2018)
+
+• Corrected a bug introduced in version 1.0.1 (values passed to WCE function arguments contrained, aic and covariates were ignored).
+
+
 Changes in version 1.0.1 (July 3 2018)
 
 • Removed default values for arguments id, event, start, stop, and expos of the WCE and checkWCE functions. 

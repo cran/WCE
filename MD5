@@ -1,11 +1,10 @@
-2f139adc95b9fc009811df2dbeae8c3f *DESCRIPTION
-038ca6fcd2c46c074c9010f74473d812 *NAMESPACE
-e153a75e09727e7750d8a7443913bdf1 *NEWS
+8db44c5a356de0ca260e57a9373e107f *DESCRIPTION
+ee3945ad37b57b2e4daa8e31d01527d0 *NAMESPACE
+884498e239dcea7b1ad94c582ca6e6c0 *NEWS
 55a6d8a7a9b9cce2e72a026a08cacdf7 *R/HR.WCE.R
-eccc136772032385d3c2664d12705a4c *R/WCE-internal.R
-8d7b6c33de6297d32f98ac1bb0a0a2a4 *R/WCE.R
-306a99a43fd909b69c2cde68e4c3d8f5 *R/WCE.cox.R
-96ccaff7e49044b66b1d9bf2a538f33b *R/WCE.data.frame.R
+507f8a2e1c9e2431dfe9888c52d2f85c *R/WCE-internal.R
+e44003c88953e7e1ef00cdd1850073f7 *R/WCE.R
+10d83d06ec14efe952ff587ca90de44e *R/WCE.cox.R
 0d3c88580463a11781b6e9ee2cde6c16 *R/WCE.default.R
 9cf0af4943f1ffda28a49dc4dbf4df8f *R/checkWCE.R
 d3361efd71eb14409089566515d3e48a *R/coef.WCE.R
@@ -27,5 +26,5 @@ e312a9710dd4fdd5847c5f2346830426 *man/drugdata.Rd
 7b67ac0b308d4b359c91ba13214f47ea *man/plot.WCE.Rd
 ceabcd0a53ccf3abe761dbf6768f06bb *man/summary.WCE.Rd
 e0539ac97d53a2fb93e0aa114a80a6ed *man/vcov.WCE.Rd
-2efd649a20feff99eeedab8b2a120716 *man/wce-package.Rd
+ff3caff5525dbe5e05c9d982715e2080 *man/wce-package.Rd
 41161cec764d43d292ee9ff294db8da1 *vignettes/WCE.pdf.asis
