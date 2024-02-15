@@ -1,18 +1,25 @@
 Package: WCE
-Type: Package
 Title: Weighted Cumulative Exposure Models
-Version: 1.0.2
-Date: 2018-08-08
-Author: Marie-Pierre Sylvestre, Marie-Eve Beauchamp, Ryan Patrick Kyle, Michal Abrahamowicz
-Maintainer: Marie-Pierre Sylvestre <marie-pierre.sylvestre@umontreal.ca>
-Depends: R (>= 2.10)
+Version: 1.0.3
+Authors@R: 
+    c(person(given = "Marie-Pierre", family = "Sylvestre", role = c("aut", "cre"), email = "marie-pierre.sylvestre@umontreal.ca", comment = c(ORCID = "0000-0001-5803-4615")),
+    person(given = "Marie-Eve", family = "Beauchamp", role =  "ctb"), person(given = "Ryan Patrick", family = "Kyle", role =  "ctb"),
+    person(given = "Michal", family = "Abrahamowicz", role =  "ctb"))
+Depends: R (>= 3.5.0)
 Imports: plyr, survival, splines
 Suggests: R.rsp
-VignetteBuilder: R.rsp
 Description: A flexible method for modeling cumulative effects of time-varying exposures, weighted according to their relative proximity in time, and represented by time-dependent covariates. The current implementation estimates the weight function in the Cox proportional hazards model. The function that assigns weights to doses taken in the past is estimated using cubic regression splines.
-License: GPL (>= 2)
+License: GPL-2 | GPL-3
+Encoding: UTF-8
 LazyData: true
+RoxygenNote: 7.3.1
 NeedsCompilation: no
-Packaged: 2018-08-08 18:18:11 UTC; p0093616
+Packaged: 2024-02-15 12:35:14 UTC; 15148
+Author: Marie-Pierre Sylvestre [aut, cre]
+    (<https://orcid.org/0000-0001-5803-4615>),
+  Marie-Eve Beauchamp [ctb],
+  Ryan Patrick Kyle [ctb],
+  Michal Abrahamowicz [ctb]
+Maintainer: Marie-Pierre Sylvestre <marie-pierre.sylvestre@umontreal.ca>
 Repository: CRAN
-Date/Publication: 2018-08-08 19:20:02 UTC
+Date/Publication: 2024-02-15 13:20:05 UTC

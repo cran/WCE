@@ -1,2 +1,220 @@
-WCE <- function(data, analysis, nknots, cutoff, constrained = FALSE, aic = FALSE, MatchedSet = NULL, id, event, start, stop, expos, covariates = NULL, controls = NULL, ...) UseMethod("WCE")
+#' Fit weighted cumulative exposure models
+#'
+#' \code{WCE} implements a flexible method for modeling cumulative effects of time-varying exposures, weighted according to their relative proximity in time, and represented by time-dependent covariates. The current implementation estimates the weight function in the Cox proportional hazards model. The function that assigns weights to doses taken in the past is estimated using cubic regression splines.
+#'
+#' @param data A data frame in an interval (long) format, in which each line corresponds to one and only one time unit for a given individual.
+#' @param analysis Character string. One of 'Cox', 'NCC' or 'CC' for Cox proportional hazards model, conditional logistic regression for nested case controls ('NCC') or logistic regression for case-controls ('CC'). Currently only 'Cox' for the Cox proportional hazards model is implemented, calling the \code{coxph} function of the survival package.
+#' @param nknots A scalar or a vector. Corresponds to the number(s) of interior knots for the cubic splines to estimate the weight function. For example, if \code{nknots} is set to 2, then a model with two interior knots is fitted. If \code{nknots}  is set to 1:3 or alternatively c(1,2,3) then three models with 1, 2, and 3 interior knots, respectively, are fitted.
+#' @param cutoff Integer. Time window over which the WCE model is estimated. Corresponds to the length of the estimated weight function.
+#' @param constrained Controls whether the weight function should be constrained to smoothly go to zero. Set to FALSE for unconstrained models, to 'Right' or 'R' to constrain the weight function to smoothly go to zero for exposure remote in time, and to 'Left' or 'L' to constrain the weight function to start a zero for the current values.
+#' @param aic Logical. If TRUE, then the AIC is used to select the best fitting model among those estimated for the different numbers of interior knots requested with \code{nknots}. If FALSE, then the BIC is used instead of the AIC. Default to FALSE (BIC). Note that the BIC implemented in \code{WCE} is the version suggested by Volinsky and Raftery in Biometrics (2000), which corresponds to BIC = 2 * log(PL) + p * log(d) where PL is the model's partial likelihood, p is the number of estimated parameters and d is the number of uncensored events. See Sylvestre and Abrahamowicz (2009) for more details.
+#' @param MatchedSet Argument required for 'NCC' analysis only. Corresponds to the variable in \code{data} that specifies the matched sets for the conditional logistic regression. Currently not implemented.
+#' @param id Name of the variable in \code{data} corresponding to the identification of subjects.
+#' @param event Name of the variable in \code{data} corresponding to event indicator. Must be coded 1 = event and 0 = no event.
+#' @param start Name of the variable in \code{data} corresponding to the starting time for the interval. Corresponds to \code{time} argument in function \code{Surv} in the survival package.
+#' @param stop Name of the variable in \code{data} corresponding to the ending time for the interval. Corresponds to \code{time2} argument in function \code{Surv} in the survival package.
+#' @param expos Name of the variable in \code{data} corresponding to the exposure variable.
+#' @param covariates Optional. Vector of characters corresponding to the name(s) of the variable(s) in \code{data} corresponding to the covariate(s) to be included in the model. Default to NULL, which corresponds to fitting model(s) without covariates.
+#' @param controls List corresponding to the control parameters to be passed to the \code{coxph} function. See \code{\link{coxph.control}} for more details.
+#' @param \dots Optional; other parameters to be passed through to \code{WCE}.
+#'
+#' @details The current implementation of the \code{WCE} function does not allow missing values in the \code{Id}, \code{event}, \code{start}, \code{stop}, \code{expos} variables. Intervals in \code{data} determined by \code{start} and \code{stop} are assumed to be open on the left and closed on the right, (start, stop]. Intervals for a given individual (\code{Id}) must not overlap, and must cover the entire follow-up for the individual. The \code{start} and \code{stop} values for a given interval must not be equal. Delayed entry is not implemented in this version of the \code{WCE} function so all of the \code{Id} must start their follow-up at the same \code{start} value. The interior knots are placed at quantiles of the exposure variable distribution.
+#'
+#' @return A list of elements:\tabular{ll}{
+#'\code{knotsmat} \tab List of vectors of knots used for the spline modelling of the weight function(s). \cr
+#'\tab \cr
+#'\code{WCEmat} \tab Matrix of the estimated weight function. Each row corresponds to an estimated weight function. The number of columns in the \code{WCEmat} corresponds to the value of the argument \code{nknots}. \cr
+#'\tab \cr
+#'\code{loglik} \tab Partial likelihood for each estimated model. \cr
+#'\tab \cr
+#'\code{est} \tab List of vectors of estimated coefficients for the artificial time-dependent variables used to fit the WCE model(s). \cr
+#'\tab \cr
+#'\code{vcovmat} \tab List of variance-covariance matrices estimated for each model. \cr
+#'\tab \cr
+#'\code{SED} \tab List of vectors of estimated standard errors of the estimated coefficients of the artificial time-dependent variables used to fit each WCE model. \cr
+#'\tab \cr
+#'\code{beta.hat.covariates} \tab List of vectors of estimated coefficients for the covariates. \cr
+#'\tab \cr
+#'\code{se.covariates} \tab List of vectors of standard errors of the estimated coefficients for the covariates. \cr
+#'\tab \cr
+#'\code{covariates} \tab Names of the covariates used in the estimation. \cr
+#'\tab \cr
+#'\code{constrained} \tab Indicator of whether the model(s) was(were) unconstrained, right-constrained or left-constrained. \cr
+#'\tab \cr
+#'\code{nevents} \tab Number of events. \cr
+#'\tab \cr
+#'\code{aic} \tab Logical value corresponding to the \code{aic} argument. \cr
+#'\tab \cr
+#'\code{info.criterion} \tab Value of the AIC or BIC for each model estimated. \cr
+#'\tab \cr
+#'\code{analysis} \tab Value of the \code{analysis} argument. \cr
+#'\tab \cr
+#'\code{...} \tab Optional, additional argument(s). \cr
+#' }
+#'
+#' @import plyr
+#' @importFrom survival coxph Surv
+#' @import splines
+#' @importFrom stats quantile vcov
+#'
+#' @note   Note that the print method for a WCE object returns the estimated WCE function(s), the number of events, the partial likelihoods, the AIC or BIC values, the matrix of coefficients estimates for the covariates (if any) and the matrix of standard error estimates for the covariates (if any).
+#'
+#' @seealso See also \code{\link{checkWCE}}, a function to check whether the arguments passed to \code{WCE} are correctly specified. See also \code{summary}, and \code{plot} for \code{WCE} objects.
+#'
+#' @references Sylvestre, M. P., & Abrahamowicz, M. (2009). Flexible modeling of the cumulative effects of time-dependent exposures on the hazard. Statistics in medicine, 28(27), 3437-3453.
+#'
+#' @examples
+#'
+#'wce <- WCE(drugdata, "Cox", 1, 90, constrained = "R", id = "Id", event = "Event",
+#'start = "Start", stop = "Stop", expos = "dose", covariates = c("age", "sex"))
+#'\dontrun{
+#'  # Confidence intervals for HR, as well as pointwise confidence bands
+#'  # for the estimated weight function can be obtained via bootstrap.
+#'
+#'  # Set the number of bootstrap resamples
+#'  #(set to 5 for demonstration purposes, should be higher)
+#'  B <- 5
+#'
+#'  # Obtain the list of ID for sampling
+#'  ID <- unique(drugdata$Id)
+#'
+#'  # Prepare vectors to extract estimated weight function and HR
+#'  # for the best-fitting model for each bootstrap resample
+#'  boot.WCE <- matrix(NA, ncol = 90, nrow=B)
+#'  boot.HR <- rep(NA, B)
+#'
+#'  # Sample IDs with replacement
+#'  for (i in 1:B){
+#'    ID.resamp <- sort(sample(ID, replace=T))
+#'    datab <- drugdata[drugdata$Id %in% ID.resamp,] # select obs. but duplicated Id are ignored
+#'
+#'    # deal with duplicated Id and assign them new Id
+#'    step <- 1
+#'    repeat {
+#'    # select duplicated Id in ID.resamp
+#'      ID.resamp <- ID.resamp[duplicated(ID.resamp)==TRUE]
+#'      if (length(ID.resamp)==0) break # stop when no more duplicated Id to deal with
+#'      # select obs. but remaining duplicated Id are ignored
+#'      subset.dup <- drugdata[drugdata$Id %in% ID.resamp,]
+#'      # assign new Id to duplicates
+#'      subset.dup$Id <- subset.dup$Id + step * 10^ceiling(log10(max(drugdata$Id)))
+#'      # 10^ceiling(log10(max(drugdata$Id)) is the power of 10
+#'      # above the maximum Id from original data
+#'      datab <- rbind(datab, subset.dup)
+#'      step <- step+1
+#'    }
+#'
+#'    mod <- WCE(data = datab, analysis = "Cox", nknots = 1:3, cutoff = 90,
+#'    constrained = "R", aic = FALSE, MatchedSet = NULL, id = "Id",
+#'    event = "Event", start = "Start", stop = "Stop", expos = "dose",
+#'    covariates = c("sex", "age"))
+#'
+#'    # return best WCE estimates and corresponding HR
+#'    best <- which.min(mod$info.criterion)
+#'    boot.WCE[i,] <- mod$WCEmat[best,]
+#'    boot.HR[i] <- HR.WCE(mod, rep(1, 90), rep(0, 90))
+#'  }
+#'
+#'  # Summarize bootstrap results using percentile method
+#'  apply(boot.WCE, 2, quantile, p = c(0.05, 0.95))
+#'  quantile(boot.HR, p = c(0.05, 0.95))
+#'}
+#'
+#' @rdname WCE
+#' @export
 
+
+WCE <- function(data, analysis = 'Cox', nknots, cutoff, constrained = FALSE, aic = FALSE, MatchedSet = NULL, id, event, start, stop, expos, covariates = NULL, controls = NULL, ...){
+
+if (analysis!='Cox')  stop("Only the Cox model option is currently implemented. Please use analysis = 'Cox'.")
+
+int.knots <- NULL # Remove this line when we later implement this option (and add argument to list above, and to WCE.data.frame & WCE)
+
+# rename variables for convenience
+names(data)[names(data) == id] <- 'Id'
+names(data)[names(data) == event] <- 'Event'
+names(data)[names(data) == start] <- 'Start'
+names(data)[names(data) == stop] <- 'Stop'
+names(data)[names(data) == expos] <- 'dose'
+
+maxTime <- max(daply(data, "Id", function(df)maxfu(df)))
+init <- 1
+nknots <- sort(unique(nknots))
+
+if (is.null(int.knots) == F & length(nknots) >1) {
+  init <- length(int.knots)
+  cat('Only 1 model with the interior knots specified will be estimated. \n\n')}
+if (cutoff > maxTime)  stop("ERROR: cutoff must be smaller than the longest follow-up time")
+if (constrained != FALSE & !constrained %in% c(FALSE, 'Right', 'R', 'right', 'Left', 'L', 'left')) stop ("ERROR: constrained has to be one of : FALSE, 'Right', or 'Left'.")
+if (constrained %in% c('R', 'right')) {constrained <- 'Right'}
+if (constrained %in% c('L', 'left')) {constrained <- 'Left'}
+PL.c <- rep(0, length(nknots))
+coef.mat.c <- list()
+vcov.mat.c <- list()
+
+sed <- list()
+gnu.c <-  matrix(0, cutoff, nrow=length(nknots))
+BIC.c <- rep(0, length(nknots))
+kev <- list()
+if (is.null(covariates) == F){
+  covbeta <- matrix(0, ncol = length(covariates), nrow = length(nknots))
+  covrobse <- matrix(0, ncol = length(covariates), nrow = length(nknots))}
+n.events <-   sum(data$Event)
+ev <- sort(unique(data[data$Event==1,]$Stop))
+
+for (j in 1: length(nknots)){
+
+  if (is.null(int.knots) == F) {
+    kev[[paste(nknots[j],"knot(s)", sep=" ")]] <- augm_knots(int.knots, cutoff)} else {
+      kev[[paste(nknots[j],"knot(s)", sep=" ")]] <- augm_knots(knotsequi(nknots[j], cutoff), cutoff)
+    }
+
+  Bbasis <- splineDesign(knots = kev[[j]], x = 1:cutoff, ord=4)
+  smalldat <- data[data$Stop %in% ev,]
+  Id <- unique(data$Id)
+
+  kal <- data.frame(do.call("rbind", lapply(1:length(Id), function(i) wcecalc(ev, data$dose[data$Id==Id[i]],data$Stop[data$Id==Id[i]],Bbasis, cutoff))))
+  kal <- kal[is.na(kal[,1])==FALSE,]
+  names(kal) <- paste("D", 1:dim(kal)[2], sep="")
+  smalldat <- cbind(smalldat, kal)
+
+  if (is.null(controls) == T) { controls <- coxph.control(1e-09, .Machine$double.eps^0.75, 20, sqrt(1e-09), 10)}
+
+  if (constrained == 'Right'){
+    co <- tryCatch(EstimateSplineConstrainedC(smalldat, nknots[j], covariates, 'Right', controls), error=function(e) NULL)}
+  if (constrained == 'Left'){
+    co <- tryCatch(EstimateSplineConstrainedC(smalldat, nknots[j], covariates, 'Left', controls), error=function(e) NULL)}
+  if (constrained == F){
+    co <- tryCatch(EstimateSplineUnconstrainedC(smalldat, nknots[j], covariates, controls), error=function(e) NULL)}
+  if (is.null(co)==FALSE) {
+    PL.c[j] <- co$ll[2]
+    if (constrained == 'Left') { gnu.c[j,] <-  Bbasis[,3:(2+length(co$Dvar))] %*% co$coefs[c(co$Dvar)]} else {
+      gnu.c[j,] <-  Bbasis[,1:length(co$Dvar)] %*% co$coefs[c(co$Dvar)]} #
+    coef.mat.c[[paste(nknots[j],"knot(s)", sep=" ")]] <- co$coefs[c(co$Dvar)]
+    vcov.mat.c[[paste(nknots[j],"knot(s)", sep=" ")]] <- co$vcovmat
+    sed[[j]] <- unlist(co$SE[c(co$Dvar)])
+    if (is.null(covariates) == F){
+      covbeta[j,1:length(covariates)] <- co$coefs[c(covariates)]
+      covrobse[j,1:length(covariates)] <- unlist(co$SE[c(covariates)])}
+    BIC.c[j] <- my_bic_c(PL.c[j], n.events ,nknots[j], constrained, aic, covariates)}
+  co <- NULL
+}
+
+# rename to ease readability
+rownames(gnu.c) <- paste(nknots, 'knot(s)')
+colnames(gnu.c) <- paste('t',1:ncol(gnu.c), sep='')
+PL.c <- matrix(PL.c, nrow=1)
+colnames(PL.c) <- paste(nknots, 'knot(s)')
+if (is.null(covariates) == F){
+  rownames(covbeta) <- paste(nknots, 'knot(s)')
+  colnames(covbeta) <- covariates
+  rownames(covrobse)<- paste(nknots, 'knot(s)')
+  colnames(covrobse) <- covariates} else {covbeta <- covrobse <- NA}
+BIC.c <- matrix(BIC.c, nrow=1)
+colnames(BIC.c) <- paste(nknots, 'knot(s)')
+if (is.null(covariates)){
+  est <- list(knotsmat = kev, WCEmat = gnu.c, loglik = PL.c, est = coef.mat.c, vcovmat = vcov.mat.c, SED = sed, constrained = constrained, covariates = NULL, nevents = n.events, aic = aic, info.criterion = BIC.c, analysis = 'Cox')} else {
+    est <- list(knotsmat = kev, WCEmat = gnu.c, loglik = PL.c, est = coef.mat.c, vcovmat = vcov.mat.c, SED = sed, beta.hat.covariates=covbeta, se.covariates= covrobse, covariates = covariates, constrained = constrained, nevents = n.events, aic = aic, info.criterion = BIC.c, analysis = 'Cox')}
+class(est) <- "WCE"
+return(est)
+}
